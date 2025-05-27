@@ -5,14 +5,144 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Report PDV</title>
     <style>
-        /* (Stili CSS invariati per brevità) */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+        h1 {
+            text-align: center;
+            color: #0056b3;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+        .header {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .client-card {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .client-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .client-number {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .remove-btn {
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 15px 0;
+            text-align: center;
+        }
+        .btn-secondary {
+            background-color: #28a745;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        .btn-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .radio-group {
+            display: flex;
+            gap: 15px;
+        }
+        .radio-option {
+            display: flex;
+            align-items: center;
+        }
+        .radio-option input {
+            width: auto;
+            margin-right: 5px;
+        }
+        #reportDate {
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .status-message {
+            text-align: center;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .button-group .btn {
+            margin: 0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>REPORT PDV</h1>
         <div id="reportDate"></div>
-
+        <div id="statusMessage"></div>
+        
         <div class="header">
             <div class="form-group">
                 <label for="colleagueName">PUNTO VENDITA:</label>
@@ -27,71 +157,140 @@
                 </select>
             </div>
         </div>
-
-        <div id="clientCards"></div>
-
+        
+        <div id="clientCards">
+            <!-- I client cards verranno generati dinamicamente -->
+        </div>
+        
         <button class="btn" id="addClientBtn">+ Aggiungi Cliente</button>
-        <button class="btn btn-secondary" id="sendReportBtn">Invia Report</button>
-        <button class="btn" style="background-color:#dc3545" id="resetBtn">Reset Modulo</button>
+        
+        <div class="button-group">
+            <button class="btn btn-warning" id="resetBtn">🗑️ Reset Dati</button>
+            <button class="btn btn-secondary" id="sendReportBtn">📧 Invia Report</button>
+        </div>
     </div>
 
     <script>
+        // Chiave per il localStorage e fallback per memoria
+        const STORAGE_KEY = 'reportPDV_data';
+        let memoryStorage = {}; // Fallback quando localStorage non è disponibile
+        
+        // Controlla se localStorage è disponibile
+        function isLocalStorageAvailable() {
+            try {
+                const test = 'test';
+                localStorage.setItem(test, test);
+                localStorage.removeItem(test);
+                return true;
+            } catch (e) {
+                console.warn('localStorage non disponibile, usando memoria temporanea');
+                return false;
+            }
+        }
+        
+        const hasLocalStorage = isLocalStorageAvailable();
+        
+        // Impostare la data corrente
         const today = new Date();
         const formattedDate = today.toLocaleDateString('it-IT');
         document.getElementById('reportDate').textContent = `Data: ${formattedDate}`;
-
+        
+        // Numero iniziale di clienti e array per tenere traccia
         let clientCount = 0;
         const clientsContainer = document.getElementById('clientCards');
-
-        function saveFormData() {
-            const formData = {
-                colleagueName: document.getElementById('colleagueName').value,
-                clientCards: []
-            };
-            document.querySelectorAll('.client-card').forEach(card => {
-                const id = card.id.split('-')[1];
-                formData.clientCards.push({
-                    addetto: document.getElementById(`addetto-${id}`).value,
-                    reparto: document.getElementById(`reparto-${id}`).value,
-                    prodotto: document.getElementById(`prodotto-${id}`).value,
-                    protocollo: document.getElementById(`protocolloSi-${id}`).checked ? 'SI' : 'NO',
-                    vendita: document.getElementById(`venditaSi-${id}`).checked ? 'SI' : 'NO'
+        
+        // Funzione per mostrare messaggi di stato
+        function showStatusMessage(message, type = 'info') {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 3000);
+        }
+        
+        // Funzione per salvare i dati (localStorage o memoria)
+        function saveToLocalStorage() {
+            try {
+                const data = {
+                    timestamp: new Date().toISOString(),
+                    colleagueName: document.getElementById('colleagueName').value,
+                    clientCount: clientCount,
+                    clients: []
+                };
+                
+                // Salva i dati di ogni cliente
+                const clientCards = document.querySelectorAll('.client-card');
+                clientCards.forEach(card => {
+                    const clientId = card.id.split('-')[1];
+                    const clientData = {
+                        id: clientId,
+                        addetto: document.getElementById(`addetto-${clientId}`)?.value || '',
+                        reparto: document.getElementById(`reparto-${clientId}`)?.value || '',
+                        prodotto: document.getElementById(`prodotto-${clientId}`)?.value || '',
+                        protocollo: document.querySelector(`input[name="protocollo-${clientId}"]:checked`)?.value || '',
+                        vendita: document.querySelector(`input[name="vendita-${clientId}"]:checked`)?.value || ''
+                    };
+                    data.clients.push(clientData);
                 });
-            });
-            localStorage.setItem('reportPDVData', JSON.stringify(formData));
+                
+                if (hasLocalStorage) {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                    console.log('Dati salvati in localStorage');
+                } else {
+                    memoryStorage[STORAGE_KEY] = data;
+                    console.log('Dati salvati in memoria temporanea');
+                }
+            } catch (error) {
+                console.error('Errore nel salvataggio:', error);
+            }
         }
-
-        function loadFormData() {
-            const data = localStorage.getItem('reportPDVData');
-            if (!data) return;
-            const formData = JSON.parse(data);
-            document.getElementById('colleagueName').value = formData.colleagueName;
-            formData.clientCards.forEach(client => {
-                addClient();
-                const id = clientCount;
-                document.getElementById(`addetto-${id}`).value = client.addetto;
-                document.getElementById(`reparto-${id}`).value = client.reparto;
-                document.getElementById(`prodotto-${id}`).value = client.prodotto;
-                document.getElementById(`protocolloSi-${id}`).checked = client.protocollo === 'SI';
-                document.getElementById(`protocolloNo-${id}`).checked = client.protocollo === 'NO';
-                document.getElementById(`venditaSi-${id}`).checked = client.vendita === 'SI';
-                document.getElementById(`venditaNo-${id}`).checked = client.vendita === 'NO';
-            });
+        
+        // Funzione per caricare i dati (localStorage o memoria)
+        function loadFromLocalStorage() {
+            try {
+                let savedData;
+                
+                if (hasLocalStorage) {
+                    const storedData = localStorage.getItem(STORAGE_KEY);
+                    if (!storedData) return false;
+                    savedData = JSON.parse(storedData);
+                } else {
+                    savedData = memoryStorage[STORAGE_KEY];
+                    if (!savedData) return false;
+                }
+                
+                // Ripristina il punto vendita
+                if (savedData.colleagueName) {
+                    document.getElementById('colleagueName').value = savedData.colleagueName;
+                }
+                
+                // Ripristina i clienti
+                if (savedData.clients && savedData.clients.length > 0) {
+                    clientCount = 0; // Reset counter
+                    savedData.clients.forEach(clientData => {
+                        addClient(clientData);
+                    });
+                    
+                    const savedTime = new Date(savedData.timestamp).toLocaleString('it-IT');
+                    const storageType = hasLocalStorage ? 'localStorage' : 'memoria temporanea';
+                    showStatusMessage(`Dati ripristinati da ${storageType} (${savedTime})`, 'success');
+                    return true;
+                }
+            } catch (error) {
+                console.error('Errore nel caricamento:', error);
+                return false;
+            }
+            return false;
         }
-
-        function resetForm() {
-            localStorage.removeItem('reportPDVData');
-            document.getElementById('colleagueName').value = '';
-            clientsContainer.innerHTML = '';
-            clientCount = 0;
-            addClient();
-        }
-
-        function addClient() {
+        
+        // Funzione per aggiungere un nuovo cliente
+        function addClient(existingData = null) {
             clientCount++;
+            
             const clientCard = document.createElement('div');
             clientCard.className = 'client-card';
             clientCard.id = `client-${clientCount}`;
+            
             clientCard.innerHTML = `
                 <div class="client-header">
                     <div class="client-number">Cliente N° ${clientCount}</div>
@@ -144,26 +343,190 @@
                     </div>
                 </div>
             `;
+            
             clientsContainer.appendChild(clientCard);
+            
+            // Se ci sono dati esistenti, ripristinali
+            if (existingData) {
+                document.getElementById(`addetto-${clientCount}`).value = existingData.addetto || '';
+                document.getElementById(`reparto-${clientCount}`).value = existingData.reparto || '';
+                document.getElementById(`prodotto-${clientCount}`).value = existingData.prodotto || '';
+                
+                if (existingData.protocollo) {
+                    const protocolloRadio = existingData.protocollo === 'SI' ? 
+                        document.getElementById(`protocolloSi-${clientCount}`) : 
+                        document.getElementById(`protocolloNo-${clientCount}`);
+                    if (protocolloRadio) protocolloRadio.checked = true;
+                }
+                
+                if (existingData.vendita) {
+                    const venditaRadio = existingData.vendita === 'SI' ? 
+                        document.getElementById(`venditaSi-${clientCount}`) : 
+                        document.getElementById(`venditaNo-${clientCount}`);
+                    if (venditaRadio) venditaRadio.checked = true;
+                }
+            }
+            
+            // Aggiungi event listeners per il salvataggio automatico
+            addAutoSaveListeners(clientCount);
         }
-
+        
+        // Funzione per aggiungere event listeners per il salvataggio automatico
+        function addAutoSaveListeners(clientId) {
+            const elements = [
+                document.getElementById(`addetto-${clientId}`),
+                document.getElementById(`reparto-${clientId}`),
+                document.getElementById(`prodotto-${clientId}`),
+                document.getElementById(`protocolloSi-${clientId}`),
+                document.getElementById(`protocolloNo-${clientId}`),
+                document.getElementById(`venditaSi-${clientId}`),
+                document.getElementById(`venditaNo-${clientId}`)
+            ];
+            
+            elements.forEach(element => {
+                if (element) {
+                    element.addEventListener('input', saveToLocalStorage);
+                    element.addEventListener('change', saveToLocalStorage);
+                }
+            });
+        }
+        
+        // Funzione per rimuovere un cliente
         function removeClient(id) {
-            const card = document.getElementById(`client-${id}`);
-            if (card) card.remove();
+            const clientCard = document.getElementById(`client-${id}`);
+            if (clientCard) {
+                clientCard.remove();
+                saveToLocalStorage(); // Salva dopo la rimozione
+                showStatusMessage('Cliente rimosso', 'info');
+            }
         }
-
-        document.getElementById('addClientBtn').addEventListener('click', () => { addClient(); saveFormData(); });
-        document.getElementById('sendReportBtn').addEventListener('click', () => { saveFormData(); sendReport(); });
-        document.getElementById('resetBtn').addEventListener('click', resetForm);
-        document.getElementById('colleagueName').addEventListener('change', saveFormData);
-
-        window.addEventListener('beforeunload', saveFormData);
-        window.onload = () => {
-            loadFormData();
-            if (clientCount === 0) addClient();
+        
+        // Funzione per resettare tutti i dati
+        function resetAllData() {
+            if (confirm('Sei sicuro di voler cancellare tutti i dati salvati? Questa operazione non può essere annullata.')) {
+                // Cancella dai dati salvati
+                if (hasLocalStorage) {
+                    localStorage.removeItem(STORAGE_KEY);
+                } else {
+                    delete memoryStorage[STORAGE_KEY];
+                }
+                
+                // Reset della pagina
+                document.getElementById('colleagueName').value = '';
+                clientsContainer.innerHTML = '';
+                clientCount = 0;
+                
+                // Aggiungi un cliente vuoto
+                addClient();
+                
+                showStatusMessage('Tutti i dati sono stati cancellati', 'success');
+            }
+        }
+        
+        // Funzione per inviare il report (via email)
+        function sendReport() {
+            const colleagueName = document.getElementById('colleagueName').value;
+            if (!colleagueName) {
+                alert('Seleziona il PUNTO VENDITA prima di inviare il report.');
+                return;
+            }
+            
+            let reportData = `REPORT PDV - ${formattedDate}\n`;
+            reportData += `PUNTO VENDITA: ${colleagueName}\n\n`;
+            
+            const clientCards = document.querySelectorAll('.client-card');
+            if (clientCards.length === 0) {
+                alert('Aggiungi almeno un cliente prima di inviare il report.');
+                return;
+            }
+            
+            // Contatori per il riepilogo
+            let totalClienti = 0;
+            let protocolloSiCount = 0;
+            let protocolloNoCount = 0;
+            let venditaSiCount = 0;
+            let venditaNoCount = 0;
+            
+            clientCards.forEach(card => {
+                const clientId = card.id.split('-')[1];
+                const addetto = document.getElementById(`addetto-${clientId}`).value;
+                const reparto = document.getElementById(`reparto-${clientId}`).value;
+                const prodotto = document.getElementById(`prodotto-${clientId}`).value;
+                
+                const protocolloSi = document.getElementById(`protocolloSi-${clientId}`).checked;
+                const protocollo = protocolloSi ? 'SI' : 'NO';
+                
+                const venditaSi = document.getElementById(`venditaSi-${clientId}`).checked;
+                const vendita = venditaSi ? 'SI' : 'NO';
+                
+                // Incrementa i contatori
+                totalClienti++;
+                if (protocolloSi) protocolloSiCount++; else protocolloNoCount++;
+                if (venditaSi) venditaSiCount++; else venditaNoCount++;
+                
+                reportData += `Cliente N° ${clientId}:\n`;
+                reportData += `- ADDETTO: ${addetto}\n`;
+                reportData += `- REPARTO/I: ${reparto}\n`;
+                reportData += `- PRODOTTO: ${prodotto}\n`;
+                reportData += `- PROTOCOLLO: ${protocollo}\n`;
+                reportData += `- VENDITA: ${vendita}\n\n`;
+            });
+            
+            // Aggiungi il riepilogo
+            reportData += `========== RIEPILOGO ==========\n`;
+            reportData += `TOTALE CLIENTI: ${totalClienti}\n`;
+            reportData += `PROTOCOLLO SI: ${protocolloSiCount}\n`;
+            reportData += `PROTOCOLLO NO: ${protocolloNoCount}\n`;
+            reportData += `VENDITE SI: ${venditaSiCount}\n`;
+            reportData += `VENDITE NO: ${venditaNoCount}\n`;
+            reportData += `===============================\n`;
+            
+            // Creare il link mailto per inviare l'email
+            const emailTo = "d.pavoni@dml-italia.com"; // Indirizzo email fisso
+            const subject = encodeURIComponent(`Report PDV - ${colleagueName} - ${formattedDate}`);
+            const body = encodeURIComponent(reportData);
+            const mailtoLink = `mailto:${emailTo}?subject=${subject}&body=${body}`;
+            
+            // Aprire il client email predefinito
+            window.location.href = mailtoLink;
+            
+            // Chiedi se cancellare i dati dopo l'invio
+            setTimeout(() => {
+                if (confirm('Report inviato! Vuoi cancellare i dati salvati per iniziare un nuovo report?')) {
+                    resetAllData();
+                }
+            }, 1000);
+        }
+        
+        // Event Listeners
+        document.getElementById('addClientBtn').addEventListener('click', () => addClient());
+        document.getElementById('sendReportBtn').addEventListener('click', sendReport);
+        document.getElementById('resetBtn').addEventListener('click', resetAllData);
+        
+        // Salvataggio automatico per il punto vendita
+        document.getElementById('colleagueName').addEventListener('change', saveToLocalStorage);
+        
+        // Inizializzazione all'avvio
+        window.onload = function() {
+            // Prova a caricare i dati esistenti
+            const hasData = loadFromLocalStorage();
+            
+            // Se non ci sono dati salvati, aggiungi il primo cliente
+            if (!hasData) {
+                addClient();
+            }
         };
-
-        // sendReport resta invariato (non riscritto qui per brevità)
+        
+        // Salvataggio automatico quando la pagina viene chiusa o nascosta
+        window.addEventListener('beforeunload', saveToLocalStorage);
+        window.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                saveToLocalStorage();
+            }
+        });
+        
+        // Salvataggio automatico ogni 30 secondi
+        setInterval(saveToLocalStorage, 30000);
     </script>
 </body>
 </html>

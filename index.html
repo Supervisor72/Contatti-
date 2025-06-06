@@ -159,8 +159,7 @@
         </div>
         
         <div id="clientCards">
-            <!-- I client cards verranno generati dinamicamente -->
-        </div>
+            </div>
         
         <button class="btn" id="addClientBtn">+ Aggiungi Cliente</button>
         
@@ -227,6 +226,10 @@
                         addetto: document.getElementById(`addetto-${clientId}`)?.value || '',
                         reparto: document.getElementById(`reparto-${clientId}`)?.value || '',
                         prodotto: document.getElementById(`prodotto-${clientId}`)?.value || '',
+                        // Nuovi campi
+                        vidimaPrezzoMedio: document.querySelector(`input[name="vidimaPrezzoMedio-${clientId}"]:checked`)?.value || '',
+                        vidimaEstensione: document.querySelector(`input[name="vidimaEstensione-${clientId}"]:checked`)?.value || '',
+                        // Campi esistenti
                         protocollo: document.querySelector(`input[name="protocollo-${clientId}"]:checked`)?.value || '',
                         vendita: document.querySelector(`input[name="vendita-${clientId}"]:checked`)?.value || ''
                     };
@@ -317,6 +320,32 @@
                     <input type="text" id="prodotto-${clientCount}" placeholder="Prodotto">
                 </div>
                 <div class="form-group">
+                    <label>VIDIMA PREZZO MEDIO:</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="vidimaPrezzoMedioSi-${clientCount}" name="vidimaPrezzoMedio-${clientCount}" value="SI">
+                            <label for="vidimaPrezzoMedioSi-${clientCount}">SI</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="vidimaPrezzoMedioNo-${clientCount}" name="vidimaPrezzoMedio-${clientCount}" value="NO">
+                            <label for="vidimaPrezzoMedioNo-${clientCount}">NO</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>VIDIMA ESTENSIONE:</label>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input type="radio" id="vidimaEstensioneSi-${clientCount}" name="vidimaEstensione-${clientCount}" value="SI">
+                            <label for="vidimaEstensioneSi-${clientCount}">SI</label>
+                        </div>
+                        <div class="radio-option">
+                            <input type="radio" id="vidimaEstensioneNo-${clientCount}" name="vidimaEstensione-${clientCount}" value="NO">
+                            <label for="vidimaEstensioneNo-${clientCount}">NO</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
                     <label>PROTOCOLLO:</label>
                     <div class="radio-group">
                         <div class="radio-option">
@@ -352,6 +381,21 @@
                 document.getElementById(`reparto-${clientCount}`).value = existingData.reparto || '';
                 document.getElementById(`prodotto-${clientCount}`).value = existingData.prodotto || '';
                 
+                // Nuovi campi
+                if (existingData.vidimaPrezzoMedio) {
+                    const vidimaPrezzoMedioRadio = existingData.vidimaPrezzoMedio === 'SI' ?
+                        document.getElementById(`vidimaPrezzoMedioSi-${clientCount}`) :
+                        document.getElementById(`vidimaPrezzoMedioNo-${clientCount}`);
+                    if (vidimaPrezzoMedioRadio) vidimaPrezzoMedioRadio.checked = true;
+                }
+                if (existingData.vidimaEstensione) {
+                    const vidimaEstensioneRadio = existingData.vidimaEstensione === 'SI' ?
+                        document.getElementById(`vidimaEstensioneSi-${clientCount}`) :
+                        document.getElementById(`vidimaEstensioneNo-${clientCount}`);
+                    if (vidimaEstensioneRadio) vidimaEstensioneRadio.checked = true;
+                }
+
+                // Campi esistenti
                 if (existingData.protocollo) {
                     const protocolloRadio = existingData.protocollo === 'SI' ? 
                         document.getElementById(`protocolloSi-${clientCount}`) : 
@@ -377,6 +421,12 @@
                 document.getElementById(`addetto-${clientId}`),
                 document.getElementById(`reparto-${clientId}`),
                 document.getElementById(`prodotto-${clientId}`),
+                // Nuovi campi
+                document.getElementById(`vidimaPrezzoMedioSi-${clientId}`),
+                document.getElementById(`vidimaPrezzoMedioNo-${clientId}`),
+                document.getElementById(`vidimaEstensioneSi-${clientId}`),
+                document.getElementById(`vidimaEstensioneNo-${clientId}`),
+                // Campi esistenti
                 document.getElementById(`protocolloSi-${clientId}`),
                 document.getElementById(`protocolloNo-${clientId}`),
                 document.getElementById(`venditaSi-${clientId}`),
@@ -446,6 +496,10 @@
             let protocolloNoCount = 0;
             let venditaSiCount = 0;
             let venditaNoCount = 0;
+            let vidimaPrezzoMedioSiCount = 0;
+            let vidimaPrezzoMedioNoCount = 0;
+            let vidimaEstensioneSiCount = 0;
+            let vidimaEstensioneNoCount = 0;
             
             clientCards.forEach(card => {
                 const clientId = card.id.split('-')[1];
@@ -453,6 +507,12 @@
                 const reparto = document.getElementById(`reparto-${clientId}`).value;
                 const prodotto = document.getElementById(`prodotto-${clientId}`).value;
                 
+                const vidimaPrezzoMedioSi = document.getElementById(`vidimaPrezzoMedioSi-${clientId}`).checked;
+                const vidimaPrezzoMedio = vidimaPrezzoMedioSi ? 'SI' : 'NO';
+                
+                const vidimaEstensioneSi = document.getElementById(`vidimaEstensioneSi-${clientId}`).checked;
+                const vidimaEstensione = vidimaEstensioneSi ? 'SI' : 'NO';
+
                 const protocolloSi = document.getElementById(`protocolloSi-${clientId}`).checked;
                 const protocollo = protocolloSi ? 'SI' : 'NO';
                 
@@ -463,11 +523,15 @@
                 totalClienti++;
                 if (protocolloSi) protocolloSiCount++; else protocolloNoCount++;
                 if (venditaSi) venditaSiCount++; else venditaNoCount++;
+                if (vidimaPrezzoMedioSi) vidimaPrezzoMedioSiCount++; else vidimaPrezzoMedioNoCount++;
+                if (vidimaEstensioneSi) vidimaEstensioneSiCount++; else vidimaEstensioneNoCount++;
                 
                 reportData += `Cliente N° ${clientId}:\n`;
                 reportData += `- ADDETTO: ${addetto}\n`;
                 reportData += `- REPARTO/I: ${reparto}\n`;
                 reportData += `- PRODOTTO: ${prodotto}\n`;
+                reportData += `- VIDIMA PREZZO MEDIO: ${vidimaPrezzoMedio}\n`;
+                reportData += `- VIDIMA ESTENSIONE: ${vidimaEstensione}\n`;
                 reportData += `- PROTOCOLLO: ${protocollo}\n`;
                 reportData += `- VENDITA: ${vendita}\n\n`;
             });
@@ -475,6 +539,10 @@
             // Aggiungi il riepilogo
             reportData += `========== RIEPILOGO ==========\n`;
             reportData += `TOTALE CLIENTI: ${totalClienti}\n`;
+            reportData += `VIDIMA PREZZO MEDIO SI: ${vidimaPrezzoMedioSiCount}\n`;
+            reportData += `VIDIMA PREZZO MEDIO NO: ${vidimaPrezzoMedioNoCount}\n`;
+            reportData += `VIDIMA ESTENSIONE SI: ${vidimaEstensioneSiCount}\n`;
+            reportData += `VIDIMA ESTENSIONE NO: ${vidimaEstensioneNoCount}\n`;
             reportData += `PROTOCOLLO SI: ${protocolloSiCount}\n`;
             reportData += `PROTOCOLLO NO: ${protocolloNoCount}\n`;
             reportData += `VENDITE SI: ${venditaSiCount}\n`;
